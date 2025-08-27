@@ -1,7 +1,7 @@
 using UnityEngine;
 public enum PlayerStateEnum { Idle, Moving, InAir, WallSliding, WallJumping }
 
-[RequireComponent(typeof(WallInteractor), typeof(PlayerAnimator))] 
+[RequireComponent(typeof(WallInteractor), typeof(PlayerAnimator))]
 public class Player : MonoBehaviour
 {
     [field: SerializeField] public PlayerMovementSettings Settings { get; private set; }
@@ -28,6 +28,10 @@ public class Player : MonoBehaviour
     private float flipLockoutTimer;
     #endregion
 
+    #region Interaction
+    private bool canInteract = false;
+    #endregion
+
     private void Awake()
     {
         PlayerAnim = GetComponent<PlayerAnimator>();
@@ -49,10 +53,17 @@ public class Player : MonoBehaviour
     {
         if (wallJumpLockoutTimer > 0) wallJumpLockoutTimer -= Time.deltaTime;
         if (flipLockoutTimer > 0) flipLockoutTimer -= Time.deltaTime;
+        // Handle Interaction Input
+        if (canInteract && InputManager.InteractPressed)
+        {
+            // Start the typing session via the TypingManager
+            FindObjectOfType<TypingManager>().StartTypingSession("Paket berisi 1000 biji kelereng untuk Pak Budi di Gang Mawar.");
+        }
 
         UpdateTimersAndChecks();
         HandleStateTransitions();
         PlayerAnim.UpdateAnimationParameters(Rb, isGrounded, currentState == PlayerStateEnum.WallSliding, Jump.JumpsLeft);
+
     }
 
     private void FixedUpdate()
@@ -124,7 +135,7 @@ public class Player : MonoBehaviour
         }
     }
     #endregion
-    
+
     #region Aksi & Helper
     private void PerformGroundJump()
     {
@@ -142,7 +153,7 @@ public class Player : MonoBehaviour
         PlayerAnim.TriggerJump();
         if (Jump.PerformJump(Rb, Settings)) jumpBufferCounter = 0;
     }
-    
+
     private void UpdateTimersAndChecks()
     {
         isGrounded = IsGroundedCheck();
@@ -158,7 +169,7 @@ public class Player : MonoBehaviour
     {
         if (newState == currentState) return;
         currentState = newState;
-        
+
         if (newState == PlayerStateEnum.WallSliding)
         {
             Jump.GrantSingleWallJump();
@@ -186,6 +197,24 @@ public class Player : MonoBehaviour
         Gizmos.color = Color.blue;
         if (Movement != null)
             Gizmos.DrawLine(wallCheck.position, wallCheck.position + (Vector3)(Vector2.right * Movement.FacingDirection * Settings.wallCheckDistance));
+    }
+    #endregion
+
+    #region Trigger Events
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (other.CompareTag("DeliveryPoint"))
+        {
+            canInteract = true;
+        }
+    }
+
+    private void OnTriggerExit2D(Collider2D other)
+    {
+        if (other.CompareTag("DeliveryPoint"))
+        {
+            canInteract = false;
+        }
     }
     #endregion
 }
