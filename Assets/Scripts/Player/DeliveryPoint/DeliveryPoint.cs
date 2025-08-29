@@ -48,5 +48,16 @@ public class DeliveryPoint : MonoBehaviour
             }
         }
     }
+    public void StartInteraction(Player player)
+    {
+        if (playerIsInRange)
+        {
+            typingManager.StartTypingSession(sentenceToType, player);
+            if (interactPrompt != null)
+            {
+                interactPrompt.SetActive(false);
+            }
+        }
+    }
 
 }

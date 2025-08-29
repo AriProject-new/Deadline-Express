@@ -208,7 +208,7 @@ GameObject:
   - component: {fileID: 112170576}
   m_Layer: 0
   m_Name: DeliveryPoint
-  m_TagString: Untagged
+  m_TagString: DeliveryPoint
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -856,6 +856,11 @@ MonoBehaviour:
   target: {fileID: 1827899568}
   smoothTime: 0.05
   offset: {x: 0, y: -0.5, z: -10}
+--- !u!1 &595156646 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4403299471394480058, guid: 150ee492975b95e43b4ea3d2e7e6eaff, type: 3}
+  m_PrefabInstance: {fileID: 7057296758191803526}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
@@ -1831,11 +1836,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2065710272 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 2789196459577925132, guid: 150ee492975b95e43b4ea3d2e7e6eaff, type: 3}
-  m_PrefabInstance: {fileID: 7057296758191803526}
-  m_PrefabAsset: {fileID: 0}
 --- !u!224 &2065710276 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 1156965703593975126, guid: 150ee492975b95e43b4ea3d2e7e6eaff, type: 3}
@@ -1870,7 +1870,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e3040a1ea2ddd294ba50d3cb2806ce7d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  typingUIPanel: {fileID: 2065710272}
+  typingUIPanel: {fileID: 595156646}
   targetSentenceText: {fileID: 105861665}
   playerInputText: {fileID: 1011192416}
 --- !u!4 &2076920685

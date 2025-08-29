@@ -1,21 +1,31 @@
 using UnityEngine;
 using TMPro;
-using UnityEngine.InputSystem; // Using the new Input System
+using UnityEngine.InputSystem;
 
 public class TypingManager : MonoBehaviour
 {
-    [Header("UI References")]
-    [SerializeField] private GameObject typingUIPanel;
-    [SerializeField] private TextMeshProUGUI targetSentenceText;
-    [SerializeField] private TextMeshProUGUI playerInputText;
+    [field: Header("UI References"), SerializeField]
+    public GameObject TypingUIPanel { get; private set; }
+
+    [field: SerializeField]
+    public TextMeshProUGUI TargetSentenceText { get; private set; }
+
+    [field: SerializeField]
+    public TextMeshProUGUI PlayerInputText { get; private set; }
 
     private string sentenceToType;
     private int currentIndex;
-    private string playerInputString;
-
+    public string playerInputString { get; private set; }
+    private Player currentPlayer;
     private PlayerController playerController;
 
-    // --- SETUP METHODS ---
+    public void Initialize(GameObject uiPanel, TextMeshProUGUI target, TextMeshProUGUI input)
+    {
+        this.TypingUIPanel = uiPanel;
+        this.TargetSentenceText = target;
+        this.PlayerInputText = input;
+    }
+
     private void Awake()
     {
         playerController = new PlayerController();
@@ -24,61 +34,70 @@ public class TypingManager : MonoBehaviour
     private void OnEnable()
     {
         playerController.Player.Enable();
-        // CHANGED: Subscribe to the text input event
         Keyboard.current.onTextInput += OnTextInput;
     }
 
     private void OnDisable()
     {
         playerController.Player.Disable();
-        // CHANGED: Unsubscribe to prevent memory leaks
         Keyboard.current.onTextInput -= OnTextInput;
     }
 
     void Start()
     {
-        typingUIPanel.SetActive(false);
+        // CHANGED: lowercase t -> uppercase T
+        TypingUIPanel.SetActive(false);
     }
 
-    // --- PUBLIC API ---
-    public void StartTypingSession(string sentence)
+    public void StartTypingSession(string sentence, Player player)
     {
         sentenceToType = sentence;
         currentIndex = 0;
         playerInputString = "";
 
-        targetSentenceText.text = sentenceToType;
-        playerInputText.text = "";
+        // CHANGED: lowercase t -> uppercase T
+        TargetSentenceText.text = sentenceToType;
+        // CHANGED: lowercase p -> uppercase P
+        PlayerInputText.text = "";
 
-        typingUIPanel.SetActive(true);
+        // CHANGED: lowercase t -> uppercase T
+        TypingUIPanel.SetActive(true);
+
+        currentPlayer = player;
+        currentPlayer.LockMovement();
     }
 
-    // --- CORE LOGIC ---
     private void Update()
     {
-        // TEMPORARY FOR TESTING
         if (playerController.Player.TestTyping.WasPressedThisFrame())
         {
-            StartTypingSession("he quick brown fox jumps over the lazy dog.");
+            // We need a Player reference to test this now. Find it in the scene.
+            Player player = FindObjectOfType<Player>();
+            if (player != null)
+            {
+                StartTypingSession("The quick brown fox jumps over the lazy dog.", player);
+            }
         }
 
-        if (!typingUIPanel.activeInHierarchy)
+        // CHANGED: lowercase t -> uppercase T
+        if (!TypingUIPanel.activeInHierarchy)
         {
             return;
         }
 
-        // REMOVED: HandleCharacterInput() is no longer called here.
         HandleBackspaceInput();
         HandleEnterInput();
     }
 
-    // NEW METHOD: This is called automatically by the Input System for each typed character.
     private void OnTextInput(char character)
     {
-        // Don't process input if the panel isn't active.
-        if (!typingUIPanel.activeInHierarchy) return;
+        // It calls the public method that contains the actual logic
+        ProcessCharacter(character);
+    }
 
-        // Ignore control characters.
+    public void ProcessCharacter(char character)
+    {
+        if (!TypingUIPanel.activeInHierarchy) return;
         if (character == '\b' || character == '\n' || character == '\r') return;
 
         if (currentIndex < sentenceToType.Length)
@@ -91,13 +110,9 @@ public class TypingManager : MonoBehaviour
 
     private void HandleBackspaceInput()
     {
-        if (playerController.Player.Backspace.WasPressedThisFrame() && currentIndex > 0)
+        if (playerController.Player.Backspace.WasPressedThisFrame())
         {
-            currentIndex--;
-            playerInputString = playerInputString.Substring(0, playerInputString.Length - 1);
-
-            Debug.Log("Backspace used! Applying time penalty.");
-            UpdateVisuals();
+            ProcessBackspace();
         }
     }
 
@@ -105,15 +120,7 @@ public class TypingManager : MonoBehaviour
     {
         if (playerController.Player.Enter.WasPressedThisFrame())
         {
-            if (playerInputString.Equals(sentenceToType))
-            {
-                Debug.Log("Success! Package Delivered.");
-                typingUIPanel.SetActive(false);
-            }
-            else
-            {
-                Debug.Log("Failed! Input does not match.");
-            }
+            ProcessEnter();
         }
     }
 
@@ -131,6 +138,33 @@ public class TypingManager : MonoBehaviour
                 richText += $"<color=red>{playerInputString[i]}</color>";
             }
         }
-        playerInputText.text = richText;
+        PlayerInputText.text = richText;
+    }
+
+    public void ProcessBackspace()
+    {
+        if (currentIndex > 0)
+        {
+            currentIndex--;
+            playerInputString = playerInputString.Substring(0, playerInputString.Length - 1);
+            Debug.Log("Backspace used! Applying time penalty.");
+            UpdateVisuals();
+        }
+    }
+
+    public void ProcessEnter()
+    {
+        if (playerInputString.Equals(sentenceToType))
+        {
+            Debug.Log("Success! Package Delivered.");
+        }
+        else
+        {
+            Debug.Log("Failed! Input does not match.");
+        }
+
+        // This happens on both success and failure
+        TypingUIPanel.SetActive(false);
+        currentPlayer.UnlockMovement();
     }
 }

@@ -26,10 +26,16 @@ public class Player : MonoBehaviour
     private float jumpBufferCounter;
     private float wallJumpLockoutTimer;
     private float flipLockoutTimer;
+
     #endregion
 
     #region Interaction
-    private bool canInteract = false;
+    // private bool canInteract = false;
+    private bool isMovementLocked = false;
+    private DeliveryPoint currentDeliveryPoint;
+
+    [System.NonSerialized]
+    public bool UnlockMovementWasCalled = false;
     #endregion
 
     private void Awake()
@@ -53,11 +59,11 @@ public class Player : MonoBehaviour
     {
         if (wallJumpLockoutTimer > 0) wallJumpLockoutTimer -= Time.deltaTime;
         if (flipLockoutTimer > 0) flipLockoutTimer -= Time.deltaTime;
+        if (isMovementLocked) return;
         // Handle Interaction Input
-        if (canInteract && InputManager.InteractPressed)
+        if (currentDeliveryPoint != null && InputManager.InteractPressed)
         {
-            // Start the typing session via the TypingManager
-            FindObjectOfType<TypingManager>().StartTypingSession("Paket berisi 1000 biji kelereng untuk Pak Budi di Gang Mawar.");
+            currentDeliveryPoint.StartInteraction(this);
         }
 
         UpdateTimersAndChecks();
@@ -69,6 +75,7 @@ public class Player : MonoBehaviour
     private void FixedUpdate()
     {
         HandleStatePhysics();
+        if (isMovementLocked) return;
     }
 
     #region FSM Core Logic
@@ -205,7 +212,8 @@ public class Player : MonoBehaviour
     {
         if (other.CompareTag("DeliveryPoint"))
         {
-            canInteract = true;
+            // Get the component and store it
+            currentDeliveryPoint = other.GetComponent<DeliveryPoint>();
         }
     }
 
@@ -213,8 +221,23 @@ public class Player : MonoBehaviour
     {
         if (other.CompareTag("DeliveryPoint"))
         {
-            canInteract = false;
+            // Clear the reference when we leave
+            currentDeliveryPoint = null;
         }
     }
+
+    public void LockMovement()
+    {
+        isMovementLocked = true;
+        Rb.velocity = Vector2.zero;
+        UnlockMovementWasCalled = false; // Reset the flag when we lock
+    }
+
+    public void UnlockMovement()
+    {
+        isMovementLocked = false;
+        UnlockMovementWasCalled = true; // Set the flag when called
+    }
+
     #endregion
 }
