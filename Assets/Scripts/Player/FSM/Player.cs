@@ -1,45 +1,70 @@
 using UnityEngine;
-public enum PlayerStateEnum { Idle, Moving, InAir, WallSliding, WallJumping }
 
-[RequireComponent(typeof(WallInteractor), typeof(PlayerAnimator))]
+/// <summary>
+/// The main controller for the player character. This class acts as the "brain" or "context" for the State Machine.
+/// It holds all the component references and core variables, but delegates the frame-by-frame logic to the current state object.
+/// </summary>
+[RequireComponent(typeof(WallInteractor))]
+[RequireComponent(typeof(PlayerAnimator))]
+[RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(InputManager))]
+[RequireComponent(typeof(PlayerMovement))]
+[RequireComponent(typeof(PlayerJump))]
 public class Player : MonoBehaviour
 {
-    [field: SerializeField] public PlayerMovementSettings Settings { get; private set; }
-    [SerializeField] private PlayerStateEnum currentState;
+    #region State Machine
+    /// <summary>
+    /// The current active state in the state machine.
+    /// </summary>
+    public PlayerBaseState CurrentState { get; private set; }
 
-    #region Komponen & Referensi
+    // State Instances
+    public readonly PlayerIdleState IdleState = new PlayerIdleState();
+    public readonly PlayerMovingState MovingState = new PlayerMovingState();
+    public readonly PlayerInAirState InAirState = new PlayerInAirState();
+    public readonly PlayerWallSlidingState WallSlidingState = new PlayerWallSlidingState();
+    public readonly PlayerWallJumpingState WallJumpingState = new PlayerWallJumpingState();
+    #endregion
+
+    #region Component References
+    /// <summary>
+    /// The scriptable object containing all movement tuning values.
+    /// </summary>
+    [field: SerializeField] public PlayerMovementSettings Settings { get; private set; }
+
+    // Core Components
     public PlayerAnimator PlayerAnim { get; private set; }
     public Rigidbody2D Rb { get; private set; }
     public InputManager InputManager { get; private set; }
     public PlayerMovement Movement { get; private set; }
     public PlayerJump Jump { get; private set; }
     public WallInteractor WallInteractor { get; private set; }
+
+    // Check Transforms
+    [field: Header("Checks")]
+    [field: SerializeField] public Transform GroundCheckTransform { get; private set; }
+    [field: SerializeField] public Transform WallCheckTransform { get; private set; }
     #endregion
 
-    #region Variabel Pengecekan & Timer
-    [Header("Debug Checks")]
-    [SerializeField] private Transform groundCheck;
-    [SerializeField] private Transform wallCheck;
-    private bool isGrounded;
-    private bool wasGroundedLastFrame;
-    private float coyoteTimeCounter;
-    private float jumpBufferCounter;
-    private float wallJumpLockoutTimer;
-    private float flipLockoutTimer;
-
-    #endregion
-
-    #region Interaction
-    // private bool canInteract = false;
+    #region Core Properties & Timers
+    public float CoyoteTimeCounter { get; private set; }
+    public float JumpBufferCounter { get; private set; }
+    public float WallJumpLockoutTimer { get; private set; }
     private bool isMovementLocked = false;
+    private bool wasGroundedLastFrame;
+    private float flipLockoutTimer;
     private DeliveryPoint currentDeliveryPoint;
 
-    [System.NonSerialized]
-    public bool UnlockMovementWasCalled = false;
+    /// <summary>
+    /// A flag used by the test suite to verify that UnlockMovement was called.
+    /// </summary>
+    [System.NonSerialized] public bool UnlockMovementWasCalled = false;
     #endregion
 
+    #region Unity Methods
     private void Awake()
     {
+        // Get all component references
         PlayerAnim = GetComponent<PlayerAnimator>();
         Rb = GetComponent<Rigidbody2D>();
         InputManager = GetComponent<InputManager>();
@@ -50,169 +75,162 @@ public class Player : MonoBehaviour
 
     private void Start()
     {
+        // Initialize sub-components that need it
         Jump.Initialize(Settings);
         WallInteractor.Initialize(this);
-        ChangeState(PlayerStateEnum.Idle);
+
+        // Start in the Idle state
+        ChangeState(IdleState);
+    }
+
+    private void OnEnable()
+    {
+        GameEvents.OnTypingSessionStart += LockMovement;
+        GameEvents.OnTypingSessionEnd += UnlockMovement;
+    }
+
+    private void OnDisable()
+    {
+        GameEvents.OnTypingSessionStart -= LockMovement;
+        GameEvents.OnTypingSessionEnd -= UnlockMovement;
     }
 
     private void Update()
     {
-        if (wallJumpLockoutTimer > 0) wallJumpLockoutTimer -= Time.deltaTime;
-        if (flipLockoutTimer > 0) flipLockoutTimer -= Time.deltaTime;
         if (isMovementLocked) return;
-        // Handle Interaction Input
+
+        // --- DELEGATE TO STATE ---
+        CurrentState.UpdateState(this);
+
+        // --- TIMERS & CHECKS ---
+        UpdateTimersAndChecks();
+        if (WallJumpLockoutTimer > 0) WallJumpLockoutTimer -= Time.deltaTime;
+        if (flipLockoutTimer > 0) flipLockoutTimer -= Time.deltaTime;
+
+        // --- INTERACTION ---
         if (currentDeliveryPoint != null && InputManager.InteractPressed)
         {
-            currentDeliveryPoint.StartInteraction(this);
+            currentDeliveryPoint.StartInteraction();
         }
 
-        UpdateTimersAndChecks();
-        HandleStateTransitions();
-        PlayerAnim.UpdateAnimationParameters(Rb, isGrounded, currentState == PlayerStateEnum.WallSliding, Jump.JumpsLeft);
-
+        // --- ANIMATION ---
+        bool isWallSliding = CurrentState is PlayerWallSlidingState;
+        PlayerAnim.UpdateAnimationParameters(Rb, IsGroundedCheck(), isWallSliding, Jump.JumpsLeft);
     }
 
     private void FixedUpdate()
     {
-        HandleStatePhysics();
         if (isMovementLocked) return;
-    }
 
-    #region FSM Core Logic
-    private void HandleStateTransitions()
-    {
-        switch (currentState)
-        {
-            case PlayerStateEnum.Idle:
-                if (InputManager.HorizontalInput != 0) ChangeState(PlayerStateEnum.Moving);
-                else if (!isGrounded) ChangeState(PlayerStateEnum.InAir);
-                if (jumpBufferCounter > 0 && coyoteTimeCounter > 0) PerformGroundJump();
-                break;
-            case PlayerStateEnum.Moving:
-                if (InputManager.HorizontalInput == 0) ChangeState(PlayerStateEnum.Idle);
-                else if (!isGrounded) ChangeState(PlayerStateEnum.InAir);
-                if (jumpBufferCounter > 0 && coyoteTimeCounter > 0) PerformGroundJump();
-                break;
-            case PlayerStateEnum.InAir:
-                if (isGrounded) ChangeState(PlayerStateEnum.Idle);
-                else if (WallInteractor.IsTouchingWall(wallCheck) && InputManager.HorizontalInput * Movement.FacingDirection > 0)
-                    ChangeState(PlayerStateEnum.WallSliding);
-                if (jumpBufferCounter > 0 && Jump.JumpsLeft > 0) PerformAirJump();
-                break;
-            case PlayerStateEnum.WallSliding:
-                if (jumpBufferCounter > 0) ChangeState(PlayerStateEnum.WallJumping);
-                else if (isGrounded) ChangeState(PlayerStateEnum.Idle);
-                else if (!WallInteractor.IsTouchingWall(wallCheck) || InputManager.HorizontalInput * Movement.FacingDirection < 0)
-                {
-                    Jump.DisableAirJumps();
-                    flipLockoutTimer = Settings.wallDetachFlipLockoutTime;
-                    ChangeState(PlayerStateEnum.InAir);
-                }
-                break;
-            case PlayerStateEnum.WallJumping:
-                if (wallJumpLockoutTimer <= 0)
-                {
-                    ChangeState(PlayerStateEnum.InAir);
-                }
-                break;
-        }
-    }
-
-    private void HandleStatePhysics()
-    {
-        bool canFlip = flipLockoutTimer <= 0 && wallJumpLockoutTimer <= 0;
-        switch (currentState)
-        {
-            case PlayerStateEnum.Idle:
-                Movement.HandleMovement(Rb, 0, false, true, canFlip, Settings);
-                break;
-            case PlayerStateEnum.Moving:
-                Movement.HandleMovement(Rb, InputManager.HorizontalInput, InputManager.IsRunning, true, canFlip, Settings);
-                break;
-            case PlayerStateEnum.InAir:
-                Movement.HandleMovement(Rb, InputManager.HorizontalInput, InputManager.IsRunning, false, canFlip, Settings);
-                Jump.HandleGravity(Rb, Settings);
-                break;
-            case PlayerStateEnum.WallSliding:
-                WallInteractor.HandleWallSlide();
-                break;
-            case PlayerStateEnum.WallJumping:
-                Jump.HandleGravity(Rb, Settings);
-                break;
-        }
+        // Delegate all physics-based logic to the current state
+        CurrentState.FixedUpdateState(this);
     }
     #endregion
 
-    #region Aksi & Helper
-    private void PerformGroundJump()
+    #region Public Methods for States
+    /// <summary>
+    /// Changes the current state of the player FSM.
+    /// </summary>
+    public void ChangeState(PlayerBaseState newState)
     {
-        PlayerAnim.TriggerJump();
+        CurrentState = newState;
+        CurrentState.EnterState(this);
+    }
+
+    public bool IsGroundedCheck()
+    {
+        return Physics2D.BoxCast(GroundCheckTransform.position, Settings.groundCheckSize, 0f, Vector2.down, Settings.groundCheckDistance, Settings.groundLayer);
+    }
+
+    public void PerformGroundJump()
+    {
         if (Jump.PerformJump(Rb, Settings))
         {
-            jumpBufferCounter = 0;
-            coyoteTimeCounter = 0;
-            ChangeState(PlayerStateEnum.InAir);
+            ResetJumpBuffer();
+            CoyoteTimeCounter = 0;
+            PlayerAnim.TriggerJump();
         }
     }
 
-    private void PerformAirJump()
+    public void PerformAirJump()
     {
-        PlayerAnim.TriggerJump();
-        if (Jump.PerformJump(Rb, Settings)) jumpBufferCounter = 0;
+        if (Jump.PerformJump(Rb, Settings))
+        {
+            ResetJumpBuffer();
+            PlayerAnim.TriggerJump();
+        }
+    }
+
+    public void ResetJumpBuffer() => JumpBufferCounter = 0;
+
+    public void StartWallJumpLockout() => WallJumpLockoutTimer = Settings.wallJumpLockoutTime;
+
+    public void StartWallDetachLockout()
+    {
+        flipLockoutTimer = Settings.wallDetachFlipLockoutTime;
+        Jump.DisableAirJumps();
     }
 
     private void UpdateTimersAndChecks()
     {
-        isGrounded = IsGroundedCheck();
-        bool justLanded = isGrounded && !wasGroundedLastFrame;
-        if (justLanded) { Jump.ResetJumpsOnGround(Settings); WallInteractor.ResetWallJumpMemory(); }
-        if (isGrounded) coyoteTimeCounter = Settings.coyoteTime; else coyoteTimeCounter -= Time.deltaTime;
-        if (InputManager.JumpPressed) jumpBufferCounter = Settings.jumpBufferTime; else jumpBufferCounter -= Time.deltaTime;
+        // Check if we are currently grounded
+        bool isGrounded = IsGroundedCheck();
+
+        // Check if we just landed this frame
+        if (isGrounded && !wasGroundedLastFrame)
+        {
+            Jump.ResetJumpsOnGround(Settings);
+            WallInteractor.ResetWallJumpMemory();
+        }
+
+        // Manage Coyote Time
+        if (isGrounded)
+        {
+            CoyoteTimeCounter = Settings.coyoteTime;
+        }
+        else
+        {
+            CoyoteTimeCounter -= Time.deltaTime;
+        }
+
+        // Manage Jump Buffer
+        if (InputManager.JumpPressed)
+        {
+            JumpBufferCounter = Settings.jumpBufferTime;
+        }
+        else
+        {
+            JumpBufferCounter -= Time.deltaTime;
+        }
+
+        // Update other sub-components that need it
         Jump.UpdateCooldownTimer();
+
+        // Store the grounded state for the next frame
         wasGroundedLastFrame = isGrounded;
     }
+    #endregion
 
-    private void ChangeState(PlayerStateEnum newState)
+    #region Movement Lock
+    public void LockMovement()
     {
-        if (newState == currentState) return;
-        currentState = newState;
+        isMovementLocked = true;
+        Rb.velocity = Vector2.zero;
+        UnlockMovementWasCalled = false;
+    }
 
-        if (newState == PlayerStateEnum.WallSliding)
-        {
-            Jump.GrantSingleWallJump();
-        }
-        else if (newState == PlayerStateEnum.WallJumping)
-        {
-            if (WallInteractor.PerformWallJump())
-            {
-                jumpBufferCounter = 0;
-                Jump.DisableAirJumps();
-                wallJumpLockoutTimer = Settings.wallJumpLockoutTime;
-                PlayerAnim.TriggerJump();
-            }
-        }
+    public void UnlockMovement()
+    {
+        isMovementLocked = false;
+        UnlockMovementWasCalled = true;
     }
     #endregion
 
-    #region Pengecekan Fisika & Gizmos
-    public bool IsGroundedCheck() { return Physics2D.BoxCast(groundCheck.position, Settings.groundCheckSize, 0f, Vector2.down, Settings.groundCheckDistance, Settings.groundLayer); }
-    private void OnDrawGizmos()
-    {
-        if (Settings == null || groundCheck == null || wallCheck == null) return;
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireCube(groundCheck.position + (Vector3)(Vector2.down * Settings.groundCheckDistance), Settings.groundCheckSize);
-        Gizmos.color = Color.blue;
-        if (Movement != null)
-            Gizmos.DrawLine(wallCheck.position, wallCheck.position + (Vector3)(Vector2.right * Movement.FacingDirection * Settings.wallCheckDistance));
-    }
-    #endregion
-
-    #region Trigger Events
+    #region Triggers & Gizmos
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("DeliveryPoint"))
         {
-            // Get the component and store it
             currentDeliveryPoint = other.GetComponent<DeliveryPoint>();
         }
     }
@@ -221,23 +239,22 @@ public class Player : MonoBehaviour
     {
         if (other.CompareTag("DeliveryPoint"))
         {
-            // Clear the reference when we leave
             currentDeliveryPoint = null;
         }
     }
 
-    public void LockMovement()
+    private void OnDrawGizmos()
     {
-        isMovementLocked = true;
-        Rb.velocity = Vector2.zero;
-        UnlockMovementWasCalled = false; // Reset the flag when we lock
-    }
+        if (Settings == null || GroundCheckTransform == null || WallCheckTransform == null) return;
 
-    public void UnlockMovement()
-    {
-        isMovementLocked = false;
-        UnlockMovementWasCalled = true; // Set the flag when called
-    }
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireCube(GroundCheckTransform.position + Vector3.down * Settings.groundCheckDistance, Settings.groundCheckSize);
 
+        Gizmos.color = Color.blue;
+        if (Movement != null)
+        {
+            Gizmos.DrawLine(WallCheckTransform.position, WallCheckTransform.position + Vector3.right * Movement.FacingDirection * Settings.wallCheckDistance);
+        }
+    }
     #endregion
 }

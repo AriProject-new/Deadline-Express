@@ -1620,9 +1620,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   <Settings>k__BackingField: {fileID: 11400000, guid: 846b4fb87c37e2e4f81653b3d4e3a727, type: 2}
-  currentState: 0
-  groundCheck: {fileID: 45820873}
-  wallCheck: {fileID: 97153869}
+  <GroundCheckTransform>k__BackingField: {fileID: 45820873}
+  <WallCheckTransform>k__BackingField: {fileID: 97153869}
 --- !u!114 &1827899570
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1870,9 +1869,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e3040a1ea2ddd294ba50d3cb2806ce7d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  typingUIPanel: {fileID: 595156646}
-  targetSentenceText: {fileID: 105861665}
-  playerInputText: {fileID: 1011192416}
+  <TypingUIPanel>k__BackingField: {fileID: 595156646}
+  <TargetSentenceText>k__BackingField: {fileID: 105861665}
+  <PlayerInputText>k__BackingField: {fileID: 1011192416}
 --- !u!4 &2076920685
 Transform:
   m_ObjectHideFlags: 0

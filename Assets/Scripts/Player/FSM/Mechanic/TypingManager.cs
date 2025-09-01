@@ -16,7 +16,6 @@ public class TypingManager : MonoBehaviour
     private string sentenceToType;
     private int currentIndex;
     public string playerInputString { get; private set; }
-    private Player currentPlayer;
     private PlayerController playerController;
 
     public void Initialize(GameObject uiPanel, TextMeshProUGUI target, TextMeshProUGUI input)
@@ -49,22 +48,19 @@ public class TypingManager : MonoBehaviour
         TypingUIPanel.SetActive(false);
     }
 
-    public void StartTypingSession(string sentence, Player player)
+    public void StartTypingSession(string sentence)
     {
         sentenceToType = sentence;
         currentIndex = 0;
         playerInputString = "";
 
-        // CHANGED: lowercase t -> uppercase T
         TargetSentenceText.text = sentenceToType;
-        // CHANGED: lowercase p -> uppercase P
         PlayerInputText.text = "";
-
-        // CHANGED: lowercase t -> uppercase T
         TypingUIPanel.SetActive(true);
 
-        currentPlayer = player;
-        currentPlayer.LockMovement();
+        // INSTEAD of locking the player directly...
+        // BROADCAST the "start" event to anyone who is listening.
+        GameEvents.OnTypingSessionStart?.Invoke();
     }
 
     private void Update()
@@ -75,7 +71,7 @@ public class TypingManager : MonoBehaviour
             Player player = FindObjectOfType<Player>();
             if (player != null)
             {
-                StartTypingSession("The quick brown fox jumps over the lazy dog.", player);
+                StartTypingSession("The quick brown fox jumps over the lazy dog.");
             }
         }
 
@@ -163,8 +159,10 @@ public class TypingManager : MonoBehaviour
             Debug.Log("Failed! Input does not match.");
         }
 
-        // This happens on both success and failure
         TypingUIPanel.SetActive(false);
-        currentPlayer.UnlockMovement();
+
+        // INSTEAD of unlocking the player directly...
+        // BROADCAST the "end" event.
+        GameEvents.OnTypingSessionEnd?.Invoke();
     }
 }

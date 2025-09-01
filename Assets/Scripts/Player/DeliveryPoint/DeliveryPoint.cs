@@ -48,11 +48,12 @@ public class DeliveryPoint : MonoBehaviour
             }
         }
     }
-    public void StartInteraction(Player player)
+    public void StartInteraction()
     {
         if (playerIsInRange)
         {
-            typingManager.StartTypingSession(sentenceToType, player);
+            // Now it just calls the simpler method on TypingManager
+            typingManager.StartTypingSession(sentenceToType);
             if (interactPrompt != null)
             {
                 interactPrompt.SetActive(false);
