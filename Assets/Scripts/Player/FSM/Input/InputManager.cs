@@ -6,14 +6,16 @@ public class InputManager : MonoBehaviour
 
     public float HorizontalInput { get; private set; }
     public bool JumpPressed { get; private set; }
+    public bool InteractPressed { get; private set; }
     public bool IsRunning { get; private set; }
-    
+
     private void Awake()
     {
         playerController = new PlayerController();
         playerController.Player.Jump.started += ctx => JumpPressed = true;
+        playerController.Player.Interact.started += ctx => InteractPressed = true;
     }
-    
+
     private void OnEnable()
     {
         playerController.Player.Enable();
@@ -23,6 +25,7 @@ public class InputManager : MonoBehaviour
     {
         playerController.Player.Disable();
         playerController.Player.Jump.started -= ctx => JumpPressed = true;
+        playerController.Player.Interact.started -= ctx => InteractPressed = true;
     }
 
     private void Update()
@@ -30,7 +33,7 @@ public class InputManager : MonoBehaviour
         // === PERBAIKAN DI SINI ===
         // 1. Baca input sebagai tipe data aslinya, yaitu Vector2.
         Vector2 moveInput = playerController.Player.Move.ReadValue<Vector2>();
-        
+
         // 2. Ambil komponen .x nya saja untuk gerakan horizontal.
         HorizontalInput = moveInput.x;
         // === SELESAI PERBAIKAN ===
@@ -41,6 +44,7 @@ public class InputManager : MonoBehaviour
     private void LateUpdate()
     {
         JumpPressed = false;
+        InteractPressed = false;
     }
 }
 
