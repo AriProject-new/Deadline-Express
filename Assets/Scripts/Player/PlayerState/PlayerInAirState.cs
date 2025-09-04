@@ -9,6 +9,13 @@ public class PlayerInAirState : PlayerBaseState
 
     public override void UpdateState(Player player)
     {
+        // Check for a ledge to climb
+        if (player.Rb.velocity.y < 0 && player.LedgeDetector.DetectLedge())
+        {
+            player.ChangeState(player.LedgeClimbingState);
+            return; // Exit early to prevent other transitions
+        }
+
         // Check for double jump input
         if (player.JumpBufferCounter > 0 && player.Jump.JumpsLeft > 0)
         {

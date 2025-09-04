@@ -65,15 +65,6 @@ public class TypingManager : MonoBehaviour
 
     private void Update()
     {
-        if (playerController.Player.TestTyping.WasPressedThisFrame())
-        {
-            // We need a Player reference to test this now. Find it in the scene.
-            Player player = FindObjectOfType<Player>();
-            if (player != null)
-            {
-                StartTypingSession("The quick brown fox jumps over the lazy dog.");
-            }
-        }
 
         // CHANGED: lowercase t -> uppercase T
         if (!TypingUIPanel.activeInHierarchy)

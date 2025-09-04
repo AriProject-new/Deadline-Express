@@ -10,6 +10,7 @@ using UnityEngine;
 [RequireComponent(typeof(InputManager))]
 [RequireComponent(typeof(PlayerMovement))]
 [RequireComponent(typeof(PlayerJump))]
+[RequireComponent(typeof(LedgeDetector))] // Added LedgeDetector
 public class Player : MonoBehaviour
 {
     #region State Machine
@@ -24,6 +25,7 @@ public class Player : MonoBehaviour
     public readonly PlayerInAirState InAirState = new PlayerInAirState();
     public readonly PlayerWallSlidingState WallSlidingState = new PlayerWallSlidingState();
     public readonly PlayerWallJumpingState WallJumpingState = new PlayerWallJumpingState();
+    public readonly PlayerLedgeClimbingState LedgeClimbingState = new PlayerLedgeClimbingState(); // New State
     #endregion
 
     #region Component References
@@ -39,6 +41,7 @@ public class Player : MonoBehaviour
     public PlayerMovement Movement { get; private set; }
     public PlayerJump Jump { get; private set; }
     public WallInteractor WallInteractor { get; private set; }
+    public LedgeDetector LedgeDetector { get; private set; } // New Component
 
     // Check Transforms
     [field: Header("Checks")]
@@ -71,6 +74,7 @@ public class Player : MonoBehaviour
         Movement = GetComponent<PlayerMovement>();
         Jump = GetComponent<PlayerJump>();
         WallInteractor = GetComponent<WallInteractor>();
+        LedgeDetector = GetComponent<LedgeDetector>(); // Get LedgeDetector
     }
 
     private void Start()
@@ -78,6 +82,7 @@ public class Player : MonoBehaviour
         // Initialize sub-components that need it
         Jump.Initialize(Settings);
         WallInteractor.Initialize(this);
+        LedgeDetector.Initialize(this); // Initialize LedgeDetector
 
         // Start in the Idle state
         ChangeState(IdleState);
@@ -133,6 +138,7 @@ public class Player : MonoBehaviour
     /// </summary>
     public void ChangeState(PlayerBaseState newState)
     {
+        CurrentState?.ExitState(this); // Call ExitState on the old state
         CurrentState = newState;
         CurrentState.EnterState(this);
     }
@@ -215,7 +221,7 @@ public class Player : MonoBehaviour
     public void LockMovement()
     {
         isMovementLocked = true;
-        Rb.velocity = Vector2.zero;
+        // Rb.velocity = Vector2.zero; // Note: We don't zero velocity here anymore because states like LedgeClimb might manage it.
         UnlockMovementWasCalled = false;
     }
 
@@ -254,6 +260,12 @@ public class Player : MonoBehaviour
         if (Movement != null)
         {
             Gizmos.DrawLine(WallCheckTransform.position, WallCheckTransform.position + Vector3.right * Movement.FacingDirection * Settings.wallCheckDistance);
+        }
+
+        // Draw Ledge Detector Gizmos
+        if (LedgeDetector != null)
+        {
+            LedgeDetector.DrawGizmos();
         }
     }
     #endregion

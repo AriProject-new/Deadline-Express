@@ -8,7 +8,7 @@ using UnityEngine;
 public class PlayerAnimator : MonoBehaviour
 {
     private Animator anim;
-    
+
     // Menggunakan Animator.StringToHash adalah optimisasi.
     // Daripada mengirim "XVelocity" (sebuah string) setiap frame, kita ubah menjadi ID integer sekali saja.
     // Ini lebih cepat dan aman dari kesalahan pengetikan.
@@ -18,6 +18,7 @@ public class PlayerAnimator : MonoBehaviour
     private readonly int isWallSlidingHash = Animator.StringToHash("IsWallSliding");
     private readonly int jumpsLeftHash = Animator.StringToHash("JumpsLeft");
     private readonly int jumpTriggerHash = Animator.StringToHash("Jump");
+    private readonly int ledgeClimbTriggerHash = Animator.StringToHash("LedgeClimb"); // NEW
 
     private void Awake()
     {
@@ -40,5 +41,13 @@ public class PlayerAnimator : MonoBehaviour
     public void TriggerJump()
     {
         anim.SetTrigger(jumpTriggerHash);
+    }
+
+    /// <summary>
+    /// Memanggil trigger LedgeClimb di Animator.
+    /// </summary>
+    public void TriggerLedgeClimb()
+    {
+        anim.SetTrigger(ledgeClimbTriggerHash);
     }
 }

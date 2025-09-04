@@ -27,15 +27,24 @@ public class PlayerMovementSettings : ScriptableObject
     public float fallGravityMultiplier = 1.5f;
     public float apexGravityMultiplier = 0.8f;
     public float apexHeightThreshold = 2f;
-    
+
     [Header("Wall Mechanics")]
     public LayerMask wallLayer;
     public float wallCheckDistance = 0.5f;
     public float wallSlideSpeed = 2f;
     public Vector2 wallJumpForce = new Vector2(15f, 20f);
-    
+
     [Header("Ground Check")]
     public LayerMask groundLayer;
     public float groundCheckDistance = 0.1f;
     public Vector2 groundCheckSize = new Vector2(0.8f, 0.2f);
+
+    [Header("Ledge Climbing")] // NEW SECTION
+    public Vector2 ledgeCheckOffset = new Vector2(0.5f, 0.8f);
+    public float ledgeWallCheckDistance = 0.7f;
+    public Vector2 ledgeSurfaceCheckOffset = new Vector2(0.1f, 1.2f);
+    public float ledgeSurfaceCheckDistance = 0.5f;
+    public Vector2 ledgeStandPositionOffset = new Vector2(0.5f, 1f);
+    public Vector2 ledgeStandCheckSize = new Vector2(0.8f, 1.8f);
+    public float ledgeClimbDuration = 0.5f;
 }

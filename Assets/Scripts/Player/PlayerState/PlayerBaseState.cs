@@ -23,4 +23,11 @@ public abstract class PlayerBaseState
     /// </summary>
     /// <param name="player">A reference to the player context.</param>
     public abstract void FixedUpdateState(Player player);
+
+    /// <summary>
+    /// Called once when the state machine transitions out of this state.
+    /// Used for cleanup logic.
+    /// </summary>
+    /// <param name="player">A reference to the player context.</param>
+    public virtual void ExitState(Player player) { }
 }
