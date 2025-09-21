@@ -47,4 +47,5 @@ public class PlayerMovementSettings : ScriptableObject
     public Vector2 ledgeStandPositionOffset = new Vector2(0.5f, 1f);
     public Vector2 ledgeStandCheckSize = new Vector2(0.8f, 1.8f);
     public float ledgeClimbDuration = 0.5f;
+    public Vector2 headCheckOffset;
 }

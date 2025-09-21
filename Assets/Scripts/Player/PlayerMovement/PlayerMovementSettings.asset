@@ -38,10 +38,11 @@ MonoBehaviour:
     m_Bits: 128
   groundCheckDistance: -0.1
   groundCheckSize: {x: 0.22, y: 0.04}
-  ledgeCheckOffset: {x: 0.5, y: 0.8}
-  ledgeWallCheckDistance: 0.7
+  ledgeCheckOffset: {x: 0.02, y: 0.03}
+  ledgeWallCheckDistance: 5
   ledgeSurfaceCheckOffset: {x: 0.1, y: 1.2}
-  ledgeSurfaceCheckDistance: 0.5
-  ledgeStandPositionOffset: {x: 0.5, y: 1}
+  ledgeSurfaceCheckDistance: 1.5
+  ledgeStandPositionOffset: {x: 1, y: 1}
   ledgeStandCheckSize: {x: 0.8, y: 1.8}
   ledgeClimbDuration: 0.5
+  headCheckOffset: {x: 0.02, y: 0.3}

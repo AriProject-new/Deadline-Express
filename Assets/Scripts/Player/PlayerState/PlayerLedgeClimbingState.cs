@@ -32,11 +32,10 @@ public class PlayerLedgeClimbingState : PlayerBaseState
     {
         _climbTimer += Time.deltaTime;
 
-        // Interpolate player position for a smooth climb animation
         float climbPercentage = _climbTimer / player.Settings.ledgeClimbDuration;
         player.transform.position = Vector2.Lerp(_startPosition, _endPosition, climbPercentage);
 
-        // Check if the climb is finished
+        // This will now work correctly
         if (_climbTimer >= player.Settings.ledgeClimbDuration)
         {
             player.ChangeState(player.IdleState);
@@ -50,7 +49,7 @@ public class PlayerLedgeClimbingState : PlayerBaseState
 
     public override void ExitState(Player player)
     {
-        // Restore physics and movement control
+        // Put the cleanup code back in ExitState
         player.Rb.isKinematic = false;
         player.UnlockMovement();
     }

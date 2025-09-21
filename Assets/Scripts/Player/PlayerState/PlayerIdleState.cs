@@ -1,9 +1,15 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 /// <summary>
 /// The state for when the player is on the ground and not moving horizontally.
 /// </summary>
 public class PlayerIdleState : PlayerBaseState
 {
-    public override void EnterState(Player player) { }
+    public override void EnterState(Player player)
+    {
+        Debug.Log("<color=green>ENTERING Idle State.</color>");
+    }
 
     public override void UpdateState(Player player)
     {

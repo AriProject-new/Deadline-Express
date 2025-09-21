@@ -53,7 +53,7 @@ public class Player : MonoBehaviour
     public float CoyoteTimeCounter { get; private set; }
     public float JumpBufferCounter { get; private set; }
     public float WallJumpLockoutTimer { get; private set; }
-    private bool isMovementLocked = false;
+    [SerializeField] private bool isMovementLocked = false;
     private bool wasGroundedLastFrame;
     private float flipLockoutTimer;
     private DeliveryPoint currentDeliveryPoint;
@@ -102,10 +102,12 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
-        if (isMovementLocked) return;
-
-        // --- DELEGATE TO STATE ---
+        // 1. ALWAYS delegate to the current state first.
+        // This allows states like LedgeClimb to run their own logic and finish.
         CurrentState.UpdateState(this);
+
+        // 2. NOW, check if movement is locked before running other general logic.
+        if (isMovementLocked) return;
 
         // --- TIMERS & CHECKS ---
         UpdateTimersAndChecks();
@@ -138,7 +140,11 @@ public class Player : MonoBehaviour
     /// </summary>
     public void ChangeState(PlayerBaseState newState)
     {
+        Debug.Log("--- STATE CHANGE INITIATED ---");
+        Debug.Log($"Current State at start of method: {CurrentState?.GetType().Name ?? "NULL"}");
+        Debug.Log($"New State to be entered: {newState.GetType().Name}");
         CurrentState?.ExitState(this); // Call ExitState on the old state
+        Debug.Log("Call to ExitState() has been passed.");
         CurrentState = newState;
         CurrentState.EnterState(this);
     }
